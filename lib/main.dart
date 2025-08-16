@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/supabase_service.dart';
+import 'services/device_service.dart';
 import 'data/demo_data.dart';
 import 'widgets/modern_widgets.dart';
 import 'pages/properties_page.dart';
@@ -11,8 +14,12 @@ import 'pages/profile_page.dart';
 import 'pages/expose_generator_page.dart';
 import 'pages/new_property_page.dart';
 import 'pages/analytics_page.dart';
+import 'pages/register_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: 'assets/env/.env');
+  await SupabaseService().initialize();
   runApp(const AimoApp());
 }
 
@@ -91,26 +98,42 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  /// Behandelt den Login-Prozess - Dummy Login, immer erfolgreich
+  /// Behandelt den Login-Prozess via Supabase
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simuliere Login-Prozess
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      // Navigation zum Dashboard
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const DashboardPage()),
+    setState(() { _isLoading = true; });
+    try {
+      await SupabaseService().signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
+      // Geräte-Fingerprint speichern (best effort)
+      try {
+        final device = await DeviceService().getDeviceFingerprint();
+        final userId = SupabaseService().currentUser?.id;
+        if (userId != null) {
+          await SupabaseService().insert('devices', {
+            'user_id': userId,
+            'platform': device['platform'],
+            'model': device['model'],
+            'brand': device['brand'],
+            'product': device['product'],
+            'identifier': device['identifierForVendor'] ?? device['androidId'],
+            'metadata': device,
+          });
+        }
+      } catch (_) {}
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const DashboardPage()),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login fehlgeschlagen: $e')),
+      );
+    } finally {
+      if (mounted) setState(() { _isLoading = false; });
     }
   }
 
@@ -140,19 +163,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo und Titel
                       _buildHeader(),
                       const SizedBox(height: 48),
-                      
-                      // Login-Formular
                       _buildLoginForm(),
                       const SizedBox(height: 32),
-                      
-                      // Login-Button
                       _buildLoginButton(),
                       const SizedBox(height: 24),
-                      
-                      // Zusätzliche Optionen
                       _buildAdditionalOptions(),
                     ],
                   ),
@@ -348,59 +364,35 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   Widget _buildAdditionalOptions() {
     return Column(
       children: [
-        const Text(
-          'oder',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
-        ),
+        const Text('oder', style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(height: 16),
-        
-        // Demo-Login Button
         SizedBox(
           width: double.infinity,
           height: 48,
           child: OutlinedButton(
             onPressed: () {
               _emailController.text = 'demo@aimo.de';
-              _passwordController.text = 'demo123';
+              _passwordController.text = 'demo1234';
               _handleLogin();
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text(
-              'Demo-Login',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
+            child: const Text('Demo-Login', style: TextStyle(fontWeight: FontWeight.w500)),
           ),
         ),
         const SizedBox(height: 24),
-        
-        // Registrierung Link
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Noch kein Konto? ',
-              style: TextStyle(color: Colors.white70),
-            ),
+            const Text('Noch kein Konto? ', style: TextStyle(color: Colors.white70)),
             TextButton(
               onPressed: () {
-                // Hier würde die Navigation zur Registrierung erfolgen
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
               },
-              child: const Text(
-                'Jetzt registrieren',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Text('Jetzt registrieren', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
