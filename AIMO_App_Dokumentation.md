@@ -39,20 +39,16 @@ lib/
 
 ## 🔐 Login & Authentifizierung
 
-### **Login-Seite** (`login_page.dart`)
-- **Dummy-Login**: Immer erfolgreich für Demo-Zwecke
-- **Moderne UI**: Gradient-Hintergrund mit Animationen
-- **Formular-Validierung**: E-Mail und Passwort-Validierung
-- **Sicherheitsfeatures**: Passwort-Sichtbarkeit Toggle
-- **Navigation**: Automatischer Übergang zum Dashboard
+### Login-Seite (`login_page.dart`)
+- Supabase E-Mail/Passwort-Login
+- Moderne UI mit Animationen
+- Formular-Validierung (E-Mail, Passwort)
+- Nach erfolgreichem Login: Geräte-Fingerprint wird in `public.devices` gespeichert
+- Navigation zum Dashboard
 
-**Features:**
-- E-Mail-Validierung mit Regex
-- Passwort-Sichtbarkeit Toggle
-- "Angemeldet bleiben" Checkbox
-- "Passwort vergessen" Link
-- Animierte Login-Buttons
-- Responsive Design
+### Registrierung (`register_page.dart`)
+- E-Mail, Passwort, Name
+- Supabase SignUp inkl. Profildaten (`public.profiles`)
 
 ---
 
@@ -97,14 +93,19 @@ lib/
   - Ausstattung, Beschreibung
 - **Statistiken**: Aufrufe, Favoriten, Online seit
 - **Aktionen**: 
-  - QR-Code generieren
+  - QR-Code generieren (echter QR via `qr_flutter`, Deeplink-Payload)
   - Exposé erstellen
-  - Kontakt aufnehmen
+  - Chatbot öffnen (Objektbezogene Fragen, `ChatbotPage`)
 
 **QR-Code-Funktion:**
-- **Dummy-QR-Code**: Visueller QR-Code
-- **Lade-Animation**: Cursor-Animation während Generierung
-- **Download-Option**: QR-Code speichern
+- Echter QR-Code mit `qr_flutter`
+- Payload enthält Base64-url-JSON (`QRService`), z. B. `https://aimo.app/p?d=...`
+- Optional: Deeplink-Ziel zur Web-/App-Detailseite
+
+**Chatbot:**
+- Chat-UI über `dash_chat_2`
+- Kontext: Aktuelles Objekt (Titel, Adresse, Ausstattung, Preis usw.)
+- Backend: OpenAI via `OpenAIService` (Modell konfigurierbar)
 
 **Exposé-Funktion:**
 - **Lade-Animation**: Cursor-Animation

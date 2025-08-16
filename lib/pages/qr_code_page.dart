@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:qr_flutter/qr_flutter.dart';
+import '../services/qr_service.dart';
+
 class QRCodePage extends StatefulWidget {
   final Map<String, dynamic> property;
 
@@ -11,12 +14,14 @@ class QRCodePage extends StatefulWidget {
 
 class _QRCodePageState extends State<QRCodePage> {
   bool _isLoading = true;
+  late final String _qrData;
 
   @override
   void initState() {
     super.initState();
-    // Simuliere Ladezeit für QR-Code Generierung
-    Future.delayed(const Duration(seconds: 1), () {
+    final payload = QRService().buildPropertyPayload(propertyId: widget.property['id'] ?? '');
+    _qrData = QRService().buildDeepLinkUrl('https://aimo.app/p', payload);
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -164,16 +169,13 @@ class _QRCodePageState extends State<QRCodePage> {
             ),
             child: Column(
               children: [
-                // Dummy QR-Code Pattern
                 Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: CustomPaint(
-                      painter: QRCodePainter(),
+                  child: Center(
+                    child: QrImageView(
+                      data: _qrData,
+                      version: QrVersions.auto,
+                      size: 220,
+                      backgroundColor: Colors.white,
                     ),
                   ),
                 ),
@@ -394,46 +396,3 @@ class _QRCodePageState extends State<QRCodePage> {
   }
 }
 
-// Custom Painter für Dummy QR-Code
-class QRCodePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final blackPaint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.fill;
-
-    // QR-Code Pattern zeichnen
-    final cellSize = size.width / 25;
-    
-    // Zufälliges QR-Code Pattern
-    for (int i = 0; i < 25; i++) {
-      for (int j = 0; j < 25; j++) {
-        final rect = Rect.fromLTWH(
-          i * cellSize,
-          j * cellSize,
-          cellSize,
-          cellSize,
-        );
-        
-        // Positionierungscodes (Ecken)
-        if ((i < 7 && j < 7) || 
-            (i > 17 && j < 7) || 
-            (i < 7 && j > 17) ||
-            (i > 17 && j > 17)) {
-          canvas.drawRect(rect, blackPaint);
-        }
-        // Zufällige Datenpunkte
-        else if ((i + j) % 3 == 0 && i > 7 && i < 18 && j > 7 && j < 18) {
-          canvas.drawRect(rect, blackPaint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
